@@ -18,12 +18,18 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 #define  CHILD		0       /* Return value of child proc from fork call */
 
 int main()
 {
-    sem_t * mutex;          /* my semaphores */
+  /* semaphores: combinations that need to be avoided */
+    sem_t * elephant_mice;
+    sem_t * dog_cat;
+    sem_t * cat_parrot;
+    sem_t * mouse_parrot;
     
     int pid;		/* Process id after fork call */
     int i;		/* Loop index. */
@@ -33,6 +39,33 @@ int main()
 
 
     /*   Initialization of the semaphores   */
+    int fd, zero = 0, *counter_ptr;
+    //open a file and map it into memory this is to hold the shared counter
+    fd = open("zoo_log.txt",O_RDWR|O_CREAT,S_IRWXU);
+    write(fd,&zero,sizeof(int));
+    counter_ptr = mmap(NULL,sizeof(int),PROT_READ |PROT_WRITE,MAP_SHARED,fd,0);
+    close(fd);
+
+    // Initialization of semaphores.
+    if ((dog_cat = sem_open("dog_cat_semaphore", O_CREAT, 0644, 1)) == SEM_FAILED) {
+      perror("semaphore initilization");
+      exit(1);
+    }
+
+    if ((elephant_mice = sem_open("elephant_mice_semaphore", O_CREAT, 0644, 1)) == SEM_FAILED) {
+      perror("semaphore initilization");
+      exit(1);
+    }
+
+    if ((cat_parrot = sem_open("cat_parrot_semaphore", O_CREAT, 0644, 1)) == SEM_FAILED) {
+      perror("semaphore initilization");
+      exit(1);
+    }
+
+    if ((mouse_parrot = sem_open("mouse_parrot_sempahore", O_CREAT, 0644, 1)) == SEM_FAILED) {
+      perror("semaphore initilization");
+      exit(1);
+    }
      
      
     printf("How many requests to be processed: \n");
@@ -56,50 +89,66 @@ int main()
 		    case 1: /* Elephant code*/
                     printf("     Elephant process with pid %d wants in.\n",pid);
                     fflush(stdout);
+                    sem_wait(elephant_mice);
                     printf("     Elephant process with pid %d is in.\n",pid);
                     fflush(stdout);
                     sleep(rand()%10);
                     printf("     Elephant process with pid %d is out.\n",pid);
+                    sem_post(elephant_mice);  
                     fflush(stdout); 
                     break;
 
 		    case 2:  /*Dog code*/
                     printf("     Dog process with pid %d wants in.\n",pid);
                     fflush(stdout);
+                    sem_wait(dog_cat);
                     printf("     Dog process with pid %d is in.\n",pid);
                     fflush(stdout);
                     sleep(rand()%10);
                     printf("     Dog process with pid %d is out.\n",pid);
+                    sem_post(dog_cat);
                     fflush(stdout);
 		            break;
 
 		    case 3: /*Cat Code*/
                     printf("     Cat process with pid %d wants in.\n",pid);
                     fflush(stdout);
+                    sem_wait(dog_cat);
+                    sem_wait(cat_parrot);
                     printf("     Cat process with pid %d is in.\n",pid);
                     fflush(stdout);
                     sleep(rand()%10);
                     printf("     Cat process with pid %d is out.\n",pid);
+                    sem_post(dog_cat);
+                    sem_post(cat_parrot);
                     fflush(stdout);
 		            break;
 
 		    case 4: /*Mouse code*/
                     printf("     Mouse process with pid %d wants in.\n",pid);
                     fflush(stdout);
+                    sem_wait(mouse_parrot);
+                    sem_wait(elephant_mice);
                     printf("     Mouse process with pid %d is in.\n",pid);
                     fflush(stdout);
                     sleep(rand()%10);
                     printf("     Mouse process with pid %d is out.\n",pid);
+                    sem_post(mouse_parrot);
+                    sem_post(elephant_mice);
                     fflush(stdout); 
 		            break;
 		
 		    case 5: /*Parrot  Code*/
                     printf("     Parrot process with pid %d wants in.\n",pid);
                     fflush(stdout);
+                    sem_wait(mouse_parrot);
+                    sem_wait(cat_parrot);
                     printf("     Parrot process with pid %d is in.\n",pid);
                     fflush(stdout);
                     sleep(rand()%10);
                     printf("     Parrot process with pid %d is out.\n",pid);
+                    sem_post(mouse_parrot);
+                    sem_post(cat_parrot);
                     fflush(stdout);
 		            break;
             }
